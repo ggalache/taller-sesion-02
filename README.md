@@ -58,17 +58,25 @@ Requisitos: Python 3.11+ y Poetry.
 
 ```bash
 cd backend
+export SECRET_KEY="una-clave-secreta-de-al-menos-32-caracteres"
 poetry install
 poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 La API quedará disponible en `http://localhost:8000`.
 
+Variables de entorno opcionales:
+
+- `SECRET_KEY` (obligatoria, mínimo 32 caracteres, clave de firmado JWT)
+- `ADMIN_USERNAME` (por defecto `admin`)
+- `ADMIN_PASSWORD` (por defecto `admin123`)
+
 ## Uso con Docker
 
 Desde la raíz del proyecto:
 
 ```bash
+export SECRET_KEY="una-clave-secreta-de-al-menos-32-caracteres"
 docker compose up --build
 ```
 

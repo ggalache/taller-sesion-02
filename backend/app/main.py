@@ -1,13 +1,22 @@
 from datetime import datetime, timedelta, timezone
+import os
+from secrets import compare_digest
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
 from jose import JWTError, jwt
 from pydantic import BaseModel
 
-SECRET_KEY = "change-this-in-production"
+SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_SECONDS = 300
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY environment variable is required")
+if len(SECRET_KEY) < 32:
+    raise RuntimeError("SECRET_KEY must be at least 32 characters long")
 
 app = FastAPI(title="JWT FastAPI Example")
 
@@ -29,7 +38,9 @@ def _create_token(subject: str) -> str:
 
 @app.post("/token")
 def create_token(payload: LoginRequest):
-    if payload.username != "admin" or payload.password != "admin123":
+    valid_user = compare_digest(payload.username, ADMIN_USERNAME)
+    valid_pass = compare_digest(payload.password, ADMIN_PASSWORD)
+    if not (valid_user and valid_pass):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     return {
@@ -42,7 +53,12 @@ def create_token(payload: LoginRequest):
 @app.post("/token/refresh")
 def refresh_token(payload: RefreshRequest):
     try:
-        decoded = jwt.decode(payload.token, SECRET_KEY, algorithms=[ALGORITHM])
+        decoded = jwt.decode(
+            payload.token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_exp": True},
+        )
         subject = decoded.get("sub")
         if not subject:
             raise HTTPException(status_code=401, detail="Invalid token")
